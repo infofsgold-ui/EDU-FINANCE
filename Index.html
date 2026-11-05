@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+<div class="scrim" onclick="toggleNav(false)"></div>
+<!-- ===================== ĐĂNG NHẬP ===================== -->
+<div class="auth" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo"><span class="brand-logo" role="img" aria-label="Logo Viet School"></span><div><b>VIET SCHOOL</b><small>EDU FINANCE · Quản lý chuỗi trường</small></div></div>
+    <div id="authLogin">
+      <div class="seg" id="authTabs" style="margin-bottom:20px"><button type="button" class="active" data-t="PARENT">Phụ huynh</button><button type="button" data-t="STAFF">Cán bộ nhân viên</button></div>
+      <form id="loginForm" class="form-grid" style="grid-template-columns:1fr">
+        <label class="field"><span id="loginUserLabel">Mã học sinh</span><input name="username" id="loginUser" autocomplete="username" required></label>
+        <label class="field">Mật khẩu<input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="btn" type="submit" style="justify-content:center;height:46px">Đăng nhập</button>
+        <a href="#" id="forgotLink" class="small" style="text-align:center">Quên mật khẩu / Lần đầu đăng nhập</a>
+      </form>
+      <div class="muted small" id="authHint" style="margin-top:16px;line-height:1.6">Phụ huynh đăng nhập bằng <b>mã học sinh</b> và mật khẩu nhà trường đã gửi qua email / SMS / Zalo.</div>
+    </div>
+    <div id="authForgot" class="hidden">
+      <h3 style="margin:0 0 6px">Lấy mật khẩu tạm</h3>
+      <p class="muted small" id="forgotHint"></p>
+      <form id="forgotForm" class="form-grid" style="grid-template-columns:1fr">
+        <label class="field"><span id="forgotLabel">Mã học sinh</span><input name="username" required></label>
+        <button class="btn" type="submit" style="justify-content:center;height:46px">Gửi mật khẩu tạm</button>
+        <a href="#" class="small" style="text-align:center" onclick="showAuth('login');return false">← Quay lại đăng nhập</a>
+      </form>
+    </div>
+    <div id="authChange" class="hidden">
+      <h3 style="margin:0 0 6px">Đặt mật khẩu mới</h3>
+      <p class="muted small">Đây là lần đăng nhập đầu tiên (hoặc mật khẩu tạm). Vui lòng đặt mật khẩu riêng: ít nhất 8 ký tự, gồm chữ và số.</p>
+      <form id="changeForm" class="form-grid" style="grid-template-columns:1fr">
+        <label class="field">Mật khẩu hiện tại (mật khẩu tạm)<input name="oldPassword" type="password" autocomplete="current-password" required></label>
+        <label class="field">Mật khẩu mới<input name="newPassword" type="password" autocomplete="new-password" required minlength="8"></label>
+        <label class="field">Nhập lại mật khẩu mới<input name="confirm" type="password" autocomplete="new-password" required></label>
+        <button class="btn" type="submit" style="justify-content:center;height:46px">Lưu mật khẩu & tiếp tục</button>
+        <a href="#" class="small" style="text-align:center" onclick="doLogout();return false">Đăng xuất</a>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="app hidden" id="appShell">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <span class="brand-logo" role="img" aria-label="Logo Viet School"></span>
+      <div>VIET SCHOOL<small>EDU FINANCE · Quản lý chuỗi trường</small></div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="spacer"></div>
+    <div class="ver" id="verText"></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-btn" onclick="toggleNav()" aria-label="Mở menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <h1 id="pageTitle">Tổng quan</h1>
+      <label class="search" id="globalSearchBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="globalSearch" placeholder="Tìm học sinh theo tên, mã, số điện thoại phụ huynh…" autocomplete="off"></label>
+      <button class="icon-btn" id="bellBtn" title="Cảnh báo" onclick="showAlerts()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="badge-dot hidden" id="bellCount">0</span></button>
+      <div class="user-meta"><b id="userName">Đang xác thực…</b><span id="userRole"></span></div>
+      <div class="avatar" id="userAvatar" title="Tài khoản" style="cursor:pointer" onclick="openAccountMenu()">·</div>
+    </header>
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <section class="page" id="page-dashboard">
+      <div class="grid">
+        <div class="card no-print">
+          <div class="filters">
+            <label class="field">Trường<select id="dSchool" class="filter-school"></select></label>
+            <label class="field">Cấp học<select id="dLevel" class="filter-level"></select></label>
+            <label class="field">Lớp<select id="dClass"></select></label>
+            <label class="field">Năm<select id="dYear"></select></label>
+            <div class="actions" style="margin-left:auto"><button class="btn ghost" onclick="loadDashboard()">Làm mới</button><button class="btn ghost" onclick="window.print()">In</button></div>
+          </div>
+        </div>
+        <div class="grid g-4" id="dStats"></div>
+        <div class="grid g-main">
+          <div class="card">
+            <div class="card-head"><div><h2>Thu – Chi theo tháng</h2><div class="sub" id="dChartSub"></div></div>
+              <div class="legend"><span><i class="dot" style="background:var(--slate)"></i>Doanh thu (đã thu)</span><span><i class="dot" style="background:var(--yellow)"></i>Chi phí</span><span><i class="dot" style="background:var(--cyan)"></i>Phải thu phát hành</span></div></div>
+            <div id="dChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Tỷ lệ thu học phí</h2><span class="muted small" id="dRateYear"></span></div>
+            <div id="dDonut"></div>
+          </div>
+        </div>
+        <div class="grid g-bottom">
+          <div class="card">
+            <div class="card-head"><div><h2>Học sinh dư nợ cao nhất</h2><div class="sub">Bấm vào tên để mở hồ sơ chi tiết</div></div></div>
+            <div class="table-wrap" id="dDebtors"></div>
+          </div>
+          <div class="grid">
+            <div class="card"><div class="card-head"><h2>Cơ cấu khoản thu</h2></div><div id="dFeeMix"></div></div>
+            <div class="card cta">
+              <h3>Gửi thông báo học phí đến phụ huynh</h3>
+              <p>Zalo OA · SMS · Email — kèm chi tiết từng khoản và mã QR chuyển khoản.</p>
+              <button class="btn white" onclick="go('notify')">Gửi ngay</button>
+              <svg class="arc" viewBox="0 0 200 200"><path d="M30 200 A90 90 0 0 1 200 110" stroke="#F3C46B" stroke-width="34" fill="none"/><path d="M95 200 A40 40 0 0 1 175 200" stroke="#4CC3E0" stroke-width="30" fill="none" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="card"><div class="card-head"><h2>Theo trường</h2><span class="muted small">Dư nợ & tỷ lệ thu tính trên toàn bộ hóa đơn; doanh thu/chi phí theo năm đã chọn</span></div><div class="table-wrap" id="dBySchool"></div></div>
+        <div class="grid g-2">
+          <div class="card"><div class="card-head"><h2>Theo cấp học</h2></div><div class="table-wrap" id="dByLevel"></div></div>
+          <div class="card"><div class="card-head"><h2>Thu tiền gần đây</h2></div><div class="table-wrap" id="dRecent"></div></div>
+        </div>
+        <div class="card"><div class="card-head"><h2>Theo lớp</h2><span class="muted small">Sắp xếp theo dư nợ giảm dần</span></div><div class="table-wrap" id="dByClass" style="max-height:520px"></div></div>
+      </div>
+    </section>
+
+    <!-- ===================== HỌC SINH ===================== -->
+    <section class="page hidden" id="page-students">
+      <div class="split">
+        <div class="card list-card">
+          <div class="card-head"><h2>Học sinh <span class="muted small" id="sCount"></span></h2><div class="actions cap-manageStudents"><button class="btn ghost sm" onclick="openImport('students')">Nhập Excel</button><button class="btn sm" onclick="openStudentForm()">+ Thêm</button></div></div>
+          <div class="list-tools">
+            <label class="search" style="margin:0;max-width:none;height:42px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="sQuery" placeholder="Tìm theo tên hoặc mã học sinh"></label>
+            <div class="row"><select class="select filter-school" id="sSchool"></select><select class="select filter-level" id="sLevel"></select></div>
+            <div class="row"><select class="select" id="sClass"></select><select class="select" id="sDebt"><option value="">Tất cả</option><option value="1">Còn nợ</option></select></div>
+            <div class="row cap-managePolicy"><select class="select" id="sPolicy"><option value="">Mọi chính sách giá / hỗ trợ</option></select></div>
+          </div>
+          <div class="student-list" id="sList"><div class="empty">Đang tải…</div></div>
+        </div>
+        <div id="sProfile"><div class="card empty">Chọn một học sinh để xem hồ sơ chi tiết.</div></div>
+      </div>
+    </section>
+
+    <!-- ===================== TÍNH HỌC PHÍ ===================== -->
+    <section class="page hidden" id="page-fees">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Tính học phí theo kỳ</h2><div class="sub">Xem trước từ bảng giá đang hiệu lực, sau đó phát hành công nợ cho cả trường</div></div></div>
+          <form id="feeForm" class="form-grid">
+            <label class="field">Trường<select name="schoolId" class="filter-school-req" id="feeSchool" required></select></label>
+            <label class="field">Cấp học<select name="level" class="filter-level" id="feeLevel"></select></label>
+            <label class="field">Lớp<select name="classId" id="feeClass"></select></label>
+            <div class="field span-all">Tháng thu <span class="muted" style="font-weight:500">(chọn một hoặc nhiều tháng — mỗi tháng tạo một hóa đơn riêng)</span><div class="month-picker" id="feeMonths"></div></div>
+            <label class="field">Hạn nộp<input name="dueDate" type="date"></label>
+            <label class="field">Số ngày tính phí theo ngày (để trống = số ngày học của tháng)<input name="defaultDays" type="number" min="0" step="1" placeholder="Tự động theo lịch trường"></label>
+            <label class="check" style="height:42px;align-self:end"><input type="checkbox" name="prorate" checked> Học sinh vào học / nghỉ giữa tháng: tính theo ngày học thực tế</label>
+            <div class="actions span-all"><button class="btn ghost" id="previewBtn" type="button">Tính xem trước</button><button class="btn" id="postBtn" type="button" disabled>Phát hành công nợ</button></div>
+          </form>
+        </div>
+        <div class="card hidden" id="feePreviewCard"><div id="feePreview"></div></div>
+        <div class="notice warn">Học sinh đã có hóa đơn học phí trong kỳ sẽ được bỏ qua (không phát hành trùng). Miễn giảm lấy từ sheet Discounts. Phí theo số lượng (QUANTITY) chỉ tính khi có đăng ký. Sau khi phát hành, tiền thu trước của học sinh được tự trừ vào hóa đơn mới.</div>
+      </div>
+    </section>
+
+    <!-- ===================== CỔNG PHỤ HUYNH ===================== -->
+    <section class="page hidden" id="page-parent">
+      <div id="parentRoot"><div class="card empty">Đang tải…</div></div>
+    </section>
+
+    <!-- ===================== TIỀN ĂN ===================== -->
+    <section class="page hidden" id="page-meals">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Tiền ăn bán trú</h2><div class="sub">Thu trước theo số ngày dự kiến → cuối tháng chốt ngày nghỉ có báo → tự trừ vào hóa đơn tháng sau</div></div><div id="mealStatus" class="actions"></div></div>
+          <div class="filters">
+            <label class="field">Trường<select id="mealSchool" class="filter-school-req"></select></label>
+            <label class="field">Tháng<input type="month" id="mealPeriod"></label>
+            <label class="field">Lớp<select id="mealClass"></select></label>
+            <button class="btn ghost" type="button" onclick="loadMeals()">Tải danh sách</button>
+          </div>
+        </div>
+        <div class="card cap-manageMeals" id="mealSetupCard">
+          <div class="card-head"><div><h2>1. Thiết lập tháng</h2><div class="sub">Làm đầu tháng, trước khi tính học phí</div></div></div>
+          <form id="mealSetupForm" class="form-grid">
+            <label class="field">Khoản phí tiền ăn (cách tính “Theo ngày”)<select name="FeeTypeId" id="mealFeeType"></select></label>
+            <label class="field">Số ngày ăn dự kiến trong tháng<input name="PlannedDays" type="number" min="0" max="31" step="1" required></label>
+            <label class="field">Hạn báo nghỉ để được trừ<input name="deadline" placeholder="VD: trước 08:00 cùng ngày"></label>
+            <label class="check" style="height:42px;align-self:end"><input type="checkbox" name="refundUnreported"> Nghỉ không báo cũng được trừ tiền</label>
+            <label class="field span-2">Ghi chú tháng (ngày nghỉ lễ…)<input name="Notes"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Lưu thiết lập</button><span class="muted small" id="mealRateInfo"></span></div>
+          </form>
+        </div>
+        <div class="grid g-4" id="mealStats"></div>
+        <div class="card">
+          <div class="card-head"><div><h2>2. Đăng ký ăn & ngày nghỉ</h2><div class="sub" id="mealGridSub"></div></div>
+            <div class="actions" id="mealGridActions">
+              <button class="btn ghost sm cap-manageMeals" type="button" onclick="mealSetAll(true)">Tất cả đăng ký</button>
+              <button class="btn ghost sm" type="button" onclick="openMealPaste()">Dán từ Excel</button>
+              <button class="btn sm" type="button" onclick="saveMeals()">Lưu</button>
+            </div></div>
+          <div class="table-wrap" id="mealTable" style="max-height:620px"><div class="empty">Chọn trường, tháng rồi bấm “Tải danh sách”.</div></div>
+        </div>
+        <div class="card" id="mealAbsCard">
+          <div class="card-head"><div><h2>Báo nghỉ của phụ huynh</h2><div class="sub">Phụ huynh báo nghỉ trên Trang phụ huynh. GVCN kiểm tra & xác nhận trước khi kế toán chốt tiền ăn. Xác nhận xong, bảng ngày nghỉ ở trên được cập nhật.</div></div>
+            <div class="actions"><button class="btn sm" type="button" onclick="actAbsences('CONFIRM')">Xác nhận đã chọn</button><button class="btn ghost sm" type="button" onclick="actAbsences('REJECT')">Từ chối đã chọn</button></div></div>
+          <div class="table-wrap" id="mealAbs" style="max-height:420px"></div>
+        </div>
+        <div class="card cap-manageMeals">
+          <div class="card-head"><div><h2>3. Chốt tiền ăn tháng</h2><div class="sub">Cuối tháng, sau khi đã nhập đủ ngày nghỉ. Chốt xong tháng bị khóa; khoản được trừ tự vào hóa đơn lần tính học phí tháng sau.</div></div>
+            <div class="actions"><button class="btn yellow" type="button" id="mealCloseBtn" onclick="closeMeals()">Chốt tiền ăn tháng</button><button class="btn ghost hidden" type="button" id="mealReopenBtn" onclick="reopenMeals()">Mở lại</button></div></div>
+          <div id="mealPending"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== THU TIỀN ===================== -->
+    <section class="page hidden" id="page-payments">
+      <div class="grid g-main">
+        <div class="card">
+          <div class="card-head"><div><h2>Ghi nhận thu tiền</h2><div class="sub">Tiền thu được phân bổ tự động vào khoản nợ cũ nhất trước (FIFO)</div></div></div>
+          <form id="paymentForm" class="form-grid">
+            <label class="field">Trường<select name="SchoolId" class="filter-school-req" id="pSchool" required></select></label>
+            <div class="field span-2">Học sinh<div class="picker" data-target="pStudent" data-school="pSchool"></div><input type="hidden" name="StudentId" id="pStudent" required></div>
+            <label class="field">Ngày thu<input name="PaymentDate" type="date" required></label>
+            <label class="field">Số tiền (VND)<input name="Amount" id="pAmount" class="num-input" inputmode="numeric" required placeholder="0"></label>
+            <label class="field">Hình thức<select name="Method"><option value="BANK_TRANSFER">Chuyển khoản</option><option value="CASH">Tiền mặt</option><option value="QR">QR</option><option value="CARD">Thẻ</option><option value="OTHER">Khác</option></select></label>
+            <label class="field">Mã tham chiếu / số chứng từ<input name="Reference"></label>
+            <label class="field span-2">Ghi chú<input name="Notes"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Ghi nhận thu tiền</button></div>
+          </form>
+        </div>
+        <div class="card"><div class="card-head"><h2>Công nợ học sinh</h2></div><div id="pDebtInfo" class="muted">Chọn học sinh để xem số còn phải thu.</div></div>
+      </div>
+    </section>
+
+    <!-- ===================== BÁN HÀNG ===================== -->
+    <section class="page hidden" id="page-sales">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Bán đồng phục, sách vở, phụ kiện</h2><div class="sub">Tạo hóa đơn bán hàng cho học sinh và tự động xuất kho</div></div></div>
+          <form id="saleForm">
+            <div class="form-grid">
+              <label class="field">Trường<select name="SchoolId" class="filter-school-req" id="saleSchool" required></select></label>
+              <div class="field">Học sinh<div class="picker" data-target="saleStudent" data-school="saleSchool"></div><input type="hidden" name="StudentId" id="saleStudent"></div>
+              <label class="field">Kho xuất<select name="WarehouseId" id="saleWarehouse" required></select></label>
+            </div>
+            <h3 style="margin:22px 0 12px;font-size:15px">Mặt hàng</h3>
+            <div class="sale-lines" id="saleLines"></div>
+            <button type="button" class="btn ghost sm" onclick="addSaleLine()">+ Thêm dòng</button>
+            <div class="form-grid" style="margin-top:20px">
+              <label class="check"><input type="checkbox" name="payNow" id="salePayNow" checked> Thu tiền ngay</label>
+              <label class="field">Hình thức thu<select name="Method"><option value="CASH">Tiền mặt</option><option value="BANK_TRANSFER">Chuyển khoản</option><option value="QR">QR</option><option value="CARD">Thẻ</option></select></label>
+              <label class="field">Ghi chú<input name="Notes"></label>
+            </div>
+            <div class="sum-box" style="margin-top:20px"><div><div class="muted small">Tổng tiền</div><div class="v" id="saleTotal">0 ₫</div></div><button class="btn yellow" type="submit">Tạo đơn bán hàng</button></div>
+          </form>
+        </div>
+        <div class="card"><div class="card-head"><div><h2>Đơn đăng ký mua của phụ huynh</h2><div class="sub">Xác nhận để tạo hóa đơn bán hàng & xuất kho; từ chối nếu hết hàng</div></div>
+          <div class="actions"><select class="select" id="ordStatus"><option value="PENDING">Chờ xác nhận</option><option value="">Tất cả</option><option value="CONFIRMED">Đã xác nhận</option><option value="REJECTED">Từ chối</option><option value="CANCELLED">Phụ huynh hủy</option></select><button class="btn ghost sm" type="button" onclick="loadParentOrders()">Làm mới</button></div></div>
+          <div class="table-wrap" id="ordTable"></div></div>
+        <div class="card"><div class="card-head"><h2>Đơn bán gần đây</h2><button class="btn ghost sm" onclick="loadRecentSales()">Làm mới</button></div><div class="table-wrap" id="saleRecent"></div></div>
+      </div>
+    </section>
+
+    <!-- ===================== CHI PHÍ ===================== -->
+    <section class="page hidden" id="page-expenses">
+      <div class="grid">
+        <div class="card cap-recordExpense">
+          <div class="card-head"><div><h2>Ghi nhận khoản chi</h2><div class="sub">Khoản chi do kế toán nhập cần lãnh đạo duyệt trước khi vào báo cáo</div></div><button class="btn ghost sm" type="button" onclick="openImport('expenses')">Nhập từ Excel</button></div>
+          <form id="expenseForm" class="form-grid">
+            <label class="field">Trường<select name="SchoolId" id="expFormSchool" class="filter-school-req" required></select></label>
+            <label class="field">Ngày chi<input name="ExpenseDate" type="date" required></label>
+            <label class="field">Hạng mục<select name="Category" id="expCategory"></select></label>
+            <label class="field">Số tiền (VND)<input name="Amount" class="num-input" inputmode="numeric" required placeholder="0"></label>
+            <label class="field">Nhà cung cấp / người nhận<input name="Vendor"></label>
+            <label class="field">Diễn giải<input name="Description"></label>
+            <label class="field">Cấp học<select name="Level" id="expFormLevel"></select></label>
+            <label class="field">Khối<input name="Grade" id="expFormGrade" placeholder="VD: 1, 6, Mầm"></label>
+            <label class="field">Lớp<select name="ClassId" id="expFormClass"></select></label>
+            <div class="actions span-all"><button class="btn" type="submit">Lưu khoản chi</button><span class="muted small">Cấp học / khối / lớp không bắt buộc — để trống nếu là chi phí chung của trường. Chọn lớp thì khối và cấp tự lấy theo lớp.</span></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Danh sách khoản chi</h2>
+            <div class="filters"><select class="select filter-school" id="expSchool"></select><select class="select filter-level" id="expLevel"></select><select class="select" id="expClass"></select><input class="select" type="date" id="expFrom"><input class="select" type="date" id="expTo"><button class="btn ghost sm" onclick="loadExpenses()">Lọc</button></div></div>
+          <div class="table-wrap" id="expList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KHO ===================== -->
+    <section class="page hidden" id="page-inventory">
+      <div class="grid">
+        <div class="grid g-4" id="invStats"></div>
+        <div class="card">
+          <div class="tabs" id="invTabs">
+            <button class="tab active" data-tab="nxt">Nhập – Xuất – Tồn</button>
+            <button class="tab cap-manageStock" data-tab="receive">Nhập hàng</button>
+            <button class="tab" data-tab="history">Lịch sử phiếu kho</button>
+            <button class="tab cap-manageStock" data-tab="move">Ghi phiếu kho</button>
+            <button class="tab cap-manageStock" data-tab="products">Mặt hàng</button>
+            <button class="tab cap-manageStock" data-tab="warehouses">Kho</button>
+            <div class="actions cap-manageStock" style="margin-left:auto;padding-bottom:6px"><button class="btn sm" type="button" onclick="openWarehouseForm()">+ Tạo kho</button><button class="btn sm yellow" type="button" onclick="openProductForm()">+ Thêm mặt hàng</button></div>
+          </div>
+          <div data-pane="nxt">
+            <div class="filters" style="margin-bottom:16px"><label class="field">Trường<select class="select filter-school" id="invSchool"></select></label><label class="field">Kho<select class="select" id="invWarehouse"><option value="">Tất cả kho</option></select></label><label class="field">Từ ngày<input type="date" id="invFrom"></label><label class="field">Đến ngày<input type="date" id="invTo"></label><button class="btn ghost" onclick="loadInventory()">Xem</button></div>
+            <div class="table-wrap" id="invTable"></div>
+          </div>
+          <div data-pane="receive" class="hidden">
+            <form id="receiptForm">
+              <div class="form-grid">
+                <label class="field">Kho nhập<select name="WarehouseId" class="wh-select" required></select></label>
+                <label class="field">Ngày nhập<input name="MovementDate" type="date" required></label>
+                <label class="field">Nhà cung cấp<input name="Vendor" list="rcVendors" placeholder="VD: NXB Giáo dục, Xưởng may ABC"></label>
+                <datalist id="rcVendors"></datalist>
+                <label class="field">Số chứng từ / hóa đơn<input name="Reference" placeholder="VD: HĐ 0001234"></label>
+                <label class="field span-2">Ghi chú<input name="Notes"></label>
+              </div>
+              <h3 style="margin:22px 0 12px;font-size:15px">Mặt hàng nhập</h3>
+              <div class="sale-lines" id="rcLines"></div>
+              <div class="actions"><button type="button" class="btn ghost sm" onclick="addReceiptLine()">+ Thêm dòng</button><button type="button" class="btn ghost sm" onclick="openProductForm()">+ Mặt hàng mới</button></div>
+              <div class="sum-box" style="margin-top:20px">
+                <div><div class="muted small">Tổng số lượng / tổng tiền</div><div class="v"><span id="rcQty">0</span> · <span id="rcTotal">0 ₫</span></div></div>
+                <label class="check cap-recordExpense"><input type="checkbox" name="createExpense"> Ghi nhận chi phí nhập hàng (trang Chi phí)</label>
+                <button class="btn yellow" type="submit">Lưu phiếu nhập</button>
+              </div>
+            </form>
+            <h3 style="margin:28px 0 12px;font-size:15px">Phiếu nhập gần đây</h3>
+            <div class="table-wrap" id="rcHistory" style="max-height:480px"></div>
+          </div>
+          <div data-pane="history" class="hidden"><div class="muted small" style="margin-bottom:10px">Lọc theo trường / kho / ngày ở tab “Nhập – Xuất – Tồn”. Số lượng: <span class="green-t strong">+</span> tăng tồn, <span class="red-t strong">−</span> giảm tồn.</div><div class="table-wrap" id="invHistory" style="max-height:600px"></div></div>
+          <div data-pane="move" class="hidden">
+            <form id="movementForm" class="form-grid">
+              <label class="field">Loại phiếu<select name="MovementType" id="movementType"><option value="IN">Nhập kho</option><option value="OUT">Xuất kho</option><option value="TRANSFER">Chuyển kho</option><option value="ADJUSTMENT_IN">Điều chỉnh tăng (kiểm kê thừa)</option><option value="ADJUSTMENT_OUT">Điều chỉnh giảm (thiếu/hỏng)</option></select></label>
+              <label class="field">Kho<select name="WarehouseId" class="wh-select" required></select></label>
+              <label class="field hidden" id="toWarehouseWrap">Kho đến<select name="ToWarehouseId" class="wh-select"></select></label>
+              <label class="field">Mặt hàng<select name="ProductId" class="product-select" required></select></label>
+              <label class="field">Số lượng<input name="Quantity" type="number" min="1" step="1" required></label>
+              <label class="field">Đơn giá vốn<input name="UnitCost" class="num-input" inputmode="numeric" value="0"></label>
+              <label class="field">Ngày<input name="MovementDate" type="date"></label>
+              <label class="field">Chứng từ tham chiếu<input name="Reference"></label>
+              <label class="field">Ghi chú<input name="Notes"></label>
+              <div class="actions span-all"><button class="btn" type="submit">Ghi phiếu kho</button></div>
+            </form>
+          </div>
+          <div data-pane="products" class="hidden">
+            <div class="filters" style="margin-bottom:14px"><input class="select" id="prodQuery" placeholder="Tìm mặt hàng, SKU…" style="min-width:240px"><select class="select" id="prodCat"><option value="">Mọi nhóm hàng</option></select><label class="check"><input type="checkbox" id="prodInactive"> Hiện cả mặt hàng đã ngừng</label></div>
+            <div class="table-wrap" id="prodTable" style="max-height:600px"></div>
+          </div>
+          <div data-pane="warehouses" class="hidden"><div class="table-wrap" id="whTable"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== THÔNG BÁO PHÍ ===================== -->
+    <section class="page hidden" id="page-notify">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Gửi thông báo học phí</h2><div class="sub">Chi tiết từng khoản phí + mã QR chuyển khoản (VietQR) gửi tới phụ huynh</div></div></div>
+          <div class="filters">
+            <label class="field">Trường<select id="nSchool" class="filter-school-req"></select></label>
+            <div class="field" style="flex-basis:100%">Tháng thu <span class="muted" style="font-weight:500">(nhiều tháng sẽ gộp thành một thông báo cho mỗi học sinh)</span><div class="month-picker" id="nMonths"></div></div>
+            <label class="field">Lớp<select id="nClass"></select></label>
+            <label class="field">Loại<select id="nType"><option value="TUITION">Học phí</option><option value="SALE">Bán hàng</option><option value="ALL">Tất cả</option></select></label>
+            <label class="check" style="height:42px"><input type="checkbox" id="nUnpaid" checked> Chỉ hóa đơn còn nợ</label>
+            <button class="btn ghost" onclick="loadNotifyList()">Lấy danh sách</button>
+          </div>
+        </div>
+        <div class="card hidden" id="nCard">
+          <div class="card-head"><h2 id="nTitle">Danh sách</h2>
+            <div class="actions">
+              <label class="check"><input type="checkbox" class="n-ch" value="ZALO"> Zalo OA</label>
+              <label class="check"><input type="checkbox" class="n-ch" value="SMS"> SMS</label>
+              <label class="check"><input type="checkbox" class="n-ch" value="EMAIL" checked> Email</label>
+              <label class="check"><input type="checkbox" id="nResend"> Gửi lại cả kênh đã gửi</label>
+              <select class="select" id="nAccount" title="Tài khoản nhận tiền in trên thông báo / mã QR" style="max-width:340px"></select>
+              <button class="btn yellow" onclick="sendNotify()">Gửi thông báo</button>
+            </div></div>
+          <div id="nWarn"></div>
+          <div class="table-wrap" id="nTable" style="max-height:600px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== BÁO CÁO ===================== -->
+    <section class="page hidden" id="page-reports">
+      <div class="grid">
+        <div class="card no-print">
+          <div class="filters">
+            <label class="field" style="min-width:260px">Loại báo cáo<select id="rType">
+              <option value="SCHOOL_SUMMARY">Tổng hợp theo trường</option>
+              <option value="LEVEL_SUMMARY">Tổng hợp theo cấp học</option>
+              <option value="CLASS_SUMMARY">Tổng hợp theo lớp</option>
+              <option value="STUDENT_DEBT">Công nợ chi tiết theo học sinh</option>
+              <option value="INVOICE_DETAIL">Chi tiết khoản thu từng học sinh</option>
+              <option value="FEE_MIX">Cơ cấu khoản thu theo loại phí</option>
+              <option value="PAYMENTS">Sổ thu tiền</option>
+              <option value="EXPENSES">Chi phí</option>
+              <option value="SALES">Bán hàng theo mặt hàng</option>
+              <option value="INVENTORY">Nhập – xuất – tồn kho</option>
+            </select></label>
+            <label class="field">Trường<select id="rSchool" class="filter-school"></select></label>
+            <label class="field">Cấp học<select id="rLevel" class="filter-level"></select></label>
+            <label class="field">Lớp<select id="rClass"></select></label>
+            <label class="field">Từ ngày<input type="date" id="rFrom"></label>
+            <label class="field">Đến ngày<input type="date" id="rTo"></label>
+            <button class="btn" onclick="runReport()">Xem báo cáo</button>
+          </div>
+        </div>
+        <div class="card hidden" id="rCard">
+          <div class="card-head"><h2 id="rTitle"></h2>
+            <div class="actions no-print"><button class="btn ghost sm" onclick="exportCsv()">Tải Excel (CSV)</button><button class="btn ghost sm" onclick="exportSheet()">Xuất Google Sheets</button><button class="btn ghost sm" onclick="window.print()">In / PDF</button></div></div>
+          <div class="report-meta" id="rMeta"></div>
+          <div class="table-wrap" id="rTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DANH MỤC ===================== -->
+    <section class="page hidden" id="page-master">
+      <div class="card">
+        <div class="tabs" id="mTabs">
+          <button class="tab active cap-manageMaster" data-tab="school">Trường học</button>
+          <button class="tab cap-manageClasses" data-tab="class">Lớp học</button>
+          <button class="tab cap-manageMaster" data-tab="fee">Khoản phí</button>
+          <button class="tab cap-manageMaster" data-tab="rate">Bảng giá</button>
+          <button class="tab cap-managePolicy" data-tab="policy">Chính sách giá / hỗ trợ</button>
+          <button class="tab cap-viewRawData" data-tab="raw">Tra cứu dữ liệu</button>
+        </div>
+        <div data-pane="school">
+          <form id="schoolForm" class="form-grid">
+            <label class="field">Tên trường<input name="SchoolName" required></label>
+            <label class="field">Cấp học<select name="Level" class="level-select"></select></label>
+            <label class="field">Địa chỉ<input name="Address"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Thêm trường</button></div>
+          </form>
+          <div class="table-wrap" id="mSchools" style="margin-top:20px"></div>
+        </div>
+        <div data-pane="class" class="hidden">
+          <form id="classForm" class="form-grid">
+            <label class="field">Trường<select name="SchoolId" class="filter-school-req" required></select></label>
+            <label class="field">Tên lớp<input name="ClassName" required placeholder="VD: 6A1, Lá 2"></label>
+            <label class="field">Khối<input name="Grade" placeholder="1–12 hoặc Nhà trẻ / Mầm / Chồi / Lá"></label>
+            <label class="field">Năm học<input name="SchoolYear" placeholder="2026-2027"></label>
+            <label class="field">GVCN (chọn tài khoản giáo viên)<input name="HomeroomTeacher" list="teacherList" placeholder="Gõ để chọn email giáo viên"></label>
+            <datalist id="teacherList"></datalist>
+            <label class="field">Sĩ số tối đa<input name="Capacity" type="number" min="0"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Thêm lớp</button></div>
+          </form>
+          <div class="filters" style="margin:22px 0 10px"><select class="select filter-school" id="mClassSchool"></select></div>
+          <div class="table-wrap" id="mClasses" style="max-height:560px"></div>
+        </div>
+        <div data-pane="fee" class="hidden">
+          <form id="feeTypeForm" class="form-grid">
+            <label class="field">Mã khoản phí<input name="FeeTypeId" placeholder="VD: HOCPHI, BANTRU"></label>
+            <label class="field">Tên khoản phí<input name="FeeName" required></label>
+            <label class="field">Nhóm<input name="Category" placeholder="Học phí / Dịch vụ / Thu hộ"></label>
+            <label class="field">Cách tính<select name="CalculationMethod"><option value="FIXED">Cố định mỗi kỳ</option><option value="PER_DAY">Theo ngày</option><option value="QUANTITY">Theo số lượng đăng ký</option></select></label>
+            <label class="field">Đơn vị<input name="Unit" placeholder="tháng / ngày / suất"></label>
+            <label class="field">Mô tả<input name="Description"></label>
+            <div class="notice span-all" style="padding:10px 14px">Nhập luôn đơn giá bên dưới để hệ thống tạo mức giá trong Bảng giá. Khoản phí <b>không có mức giá</b> sẽ không được tính vào học phí.
+              Tiền ăn tính theo suất: chọn cách tính <b>Theo ngày</b>, đơn giá = giá 1 suất, khi tính học phí nhập “Số ngày ăn”.</div>
+            <label class="field">Đơn giá (VND)<input name="UnitPrice" class="num-input" inputmode="numeric" placeholder="VD: 35.000 / suất hoặc 7.500.000 / tháng"></label>
+            <label class="field">Áp dụng cho trường<select name="RateSchoolId" class="filter-school"></select></label>
+            <label class="field">Áp dụng cấp<select name="Level" class="level-select"></select></label>
+            <label class="field">Hiệu lực từ tháng<input name="ValidFrom" type="month"></label>
+            <label class="field">Đến tháng (trống = không thời hạn)<input name="ValidTo" type="month"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Thêm khoản phí</button></div>
+          </form>
+          <div class="table-wrap" id="mFees" style="margin-top:20px"></div>
+        </div>
+        <div data-pane="rate" class="hidden">
+          <form id="rateForm" class="form-grid">
+            <label class="field">Trường<select name="SchoolId" class="filter-school-req" required></select></label>
+            <label class="field">Khoản phí<select name="FeeTypeId" id="rateFeeType" required></select></label>
+            <label class="field">Đơn giá (VND)<input name="UnitPrice" class="num-input" inputmode="numeric" required placeholder="0"></label>
+            <label class="field">Áp dụng cấp<select name="Level" class="level-select"></select></label>
+            <label class="field">Áp dụng khối (trống = mọi khối)<input name="Grade"></label>
+            <label class="field">Chu kỳ<select name="Frequency"><option value="MONTHLY">Hàng tháng</option><option value="DAILY">Theo ngày (suất ăn)</option><option value="TERM">Học kỳ</option><option value="YEARLY">Năm học</option><option value="ONCE">Một lần</option></select></label>
+            <label class="field">Hiệu lực từ<input name="ValidFrom" type="month"></label>
+            <label class="field">Hiệu lực đến<input name="ValidTo" type="month"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Thêm mức giá</button></div>
+          </form>
+          <div class="filters" style="margin:22px 0 10px"><select class="select filter-school" id="mRateSchool"></select></div>
+          <div class="table-wrap" id="mRates" style="max-height:560px"></div>
+        </div>
+        <div data-pane="policy" class="hidden">
+          <div class="filters" style="margin-bottom:18px">
+            <label class="field">Trường<select class="select filter-school" id="polSchool"></select></label>
+            <label class="field">Nhóm<select class="select" id="polType"></select></label>
+            <label class="field">Trạng thái<select class="select" id="polStatus"><option value="">Tất cả</option><option value="PENDING">Chờ duyệt</option><option value="APPROVED">Đang áp dụng</option><option value="INACTIVE">Đã ngừng</option></select></label>
+            <div class="actions" style="margin-left:auto"><button class="btn" type="button" onclick="openPolicyForm()">+ Tạo chính sách</button></div>
+          </div>
+          <div id="polList"></div>
+          <div class="notice" style="margin-top:18px">Chính sách <b>toàn trường</b> và <b>anh chị em ruột</b> tự áp dụng khi tính học phí. Các nhóm <b>đóng trước học kỳ / năm</b>, <b>con CB-GV-NV</b> và <b>hỗ trợ từng học sinh</b> cần ghi danh học sinh. Chính sách do kế toán tạo phải được Hiệu trưởng / Kế toán trưởng duyệt mới có hiệu lực. Chính sách <b>không cộng dồn</b>: học sinh được hưởng mức có lợi nhất.</div>
+        </div>
+        <div data-pane="raw" class="hidden">
+          <div class="filters" style="margin-bottom:14px"><select class="select" id="rawEntity"><option value="schools">Trường học</option><option value="classes">Lớp học</option><option value="students">Học sinh</option><option value="feeTypes">Loại phí</option><option value="feeRates">Bảng giá</option><option value="discounts">Miễn giảm</option><option value="invoices">Hóa đơn</option><option value="invoiceLines">Chi tiết hóa đơn</option><option value="payments">Giao dịch thu</option><option value="allocations">Phân bổ thanh toán</option><option value="products">Hàng hóa</option><option value="warehouses">Kho</option><option value="stockMovements">Phiếu kho</option><option value="expenses">Chi phí</option></select><button class="btn ghost" onclick="loadRaw()">Tải dữ liệu</button></div>
+          <div class="table-wrap" id="rawTable" style="max-height:600px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== NGƯỜI DÙNG ===================== -->
+    <section class="page hidden" id="page-users">
+      <div class="card">
+        <div class="card-head"><div><h2>Người dùng & phân quyền</h2><div class="sub">Phụ huynh có email trong hồ sơ học sinh được tự nhận diện, không cần tạo tài khoản</div></div><button class="btn" onclick="openUserForm()">+ Thêm người dùng</button></div>
+        <div class="table-wrap" id="uTable"></div>
+      </div>
+      <div class="card cap-manageParentAccounts" style="margin-top:24px">
+        <div class="card-head"><div><h2>Tài khoản phụ huynh</h2><div class="sub">Tên đăng nhập = mã học sinh · mật khẩu tạm gửi qua kênh đã chọn · lần đầu đăng nhập bắt buộc đổi mật khẩu</div></div>
+          <div class="filters"><select class="select filter-school" id="paSchool"></select><select class="select" id="paClass"></select><select class="select" id="paFilter"><option value="">Tất cả</option><option value="none">Chưa có tài khoản</option><option value="has">Đã có tài khoản</option><option value="never">Chưa đăng nhập lần nào</option></select></div></div>
+        <div class="actions" style="margin-bottom:14px">
+          <label class="check"><input type="checkbox" class="pa-ch" value="EMAIL" checked> Email</label>
+          <label class="check"><input type="checkbox" class="pa-ch" value="SMS"> SMS</label>
+          <label class="check"><input type="checkbox" class="pa-ch" value="ZALO"> Zalo OA</label>
+          <button class="btn" type="button" onclick="issueParents(false)">Cấp tài khoản cho HS đã chọn</button>
+          <button class="btn ghost" type="button" onclick="issueParents(true)">Gửi lại mật khẩu mới</button>
+          <button class="btn ghost" type="button" onclick="mergeFamilies()">Gộp tài khoản anh chị em</button>
+        </div>
+        <div class="table-wrap" id="paTable" style="max-height:560px"></div>
+      </div>
+      <div class="card" style="margin-top:24px"><div class="card-head"><h2>Quyền theo vai trò</h2></div><div class="table-wrap" id="uMatrix"></div></div>
+    </section>
+
+    <!-- ===================== BANNER PHỤ HUYNH ===================== -->
+    <section class="page hidden" id="page-banner">
+      <div class="banner-grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Hero Banner trang phụ huynh</h2><div class="sub">Ảnh và thông điệp hiển thị đầu trang khi phụ huynh đăng nhập</div></div></div>
+          <label class="field" style="margin-bottom:14px">Trường<select class="select" id="bnSchool"></select></label>
+          <div id="bnSource" class="notice" style="margin-bottom:14px"></div>
+          <form id="bnForm" class="form-grid" style="grid-template-columns:1fr">
+            <div class="field">Ảnh nền <span class="muted" style="font-weight:500">(ảnh học sinh / khuôn viên trường; ngang, khuyến nghị 1920×900, JPG/PNG/WEBP ≤ 8 MB)</span>
+              <div class="actions" style="margin-top:6px"><input type="file" id="bnImg" accept="image/jpeg,image/png,image/webp" class="select" style="padding:8px;height:auto;flex:1;min-width:200px"><button class="btn ghost sm" type="button" id="bnImgUp">Tải ảnh lên</button><button class="btn ghost sm hidden" type="button" id="bnImgDel">Xóa ảnh</button></div></div>
+            <label class="field">Dòng giới thiệu (chữ nhỏ trên cùng)<input name="Eyebrow" maxlength="80"></label>
+            <label class="field">Tiêu đề chính<input name="Title" maxlength="80" required></label>
+            <label class="field">Tiêu đề nhấn mạnh (chữ vàng nghiêng)<input name="TitleAccent" maxlength="80"></label>
+            <label class="field">Mô tả ngắn<textarea name="Description" maxlength="400" rows="3"></textarea></label>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+              <label class="field">Nút chính<input name="CtaLabel" maxlength="40"></label>
+              <label class="field">Liên kết nút chính<input name="CtaLink" placeholder="https://website-truong.edu.vn"></label>
+              <label class="field">Nút video<input name="VideoLabel" maxlength="40"></label>
+              <label class="field">Liên kết video<input name="VideoUrl" placeholder="https://youtube.com/…"></label>
+            </div>
+            <label class="field">Khẩu hiệu trên ảnh<input name="Tagline" maxlength="40" placeholder="Dream · Learn · Grow"></label>
+            <div class="field">Số liệu nổi bật (tối đa 4)<div id="bnStats" style="margin-top:6px"></div></div>
+            <label class="check"><input type="checkbox" name="Active"> Hiển thị banner cho phụ huynh</label>
+            <div class="actions"><button class="btn" type="submit">Lưu banner</button><button class="btn ghost" type="button" id="bnReset">Khôi phục mặc định</button></div>
+          </form>
+        </div>
+        <div class="card" style="position:sticky;top:16px">
+          <div class="card-head"><div><h2>Xem trước</h2><div class="sub">Giao diện phụ huynh nhìn thấy (máy tính / điện thoại)</div></div>
+            <div class="seg" id="bnView"><button type="button" class="active" data-v="desk">Máy tính</button><button type="button" data-v="mobile">Điện thoại</button></div></div>
+          <div id="bnPreview"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CÀI ĐẶT ===================== -->
+    <section class="page hidden" id="page-settings">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Tài khoản ngân hàng thu tiền</h2><div class="sub">Mỗi trường có thể dùng 1 hoặc nhiều tài khoản (theo mục đích: học phí, bán hàng…). Tài khoản mặc định được dùng cho mã QR khi không chọn tài khoản khác.</div></div>
+            <div class="actions"><select class="select" id="bankSchool"></select><button class="btn sm cap-manageSettings" type="button" onclick="openBankForm()">+ Thêm tài khoản</button></div></div>
+          <div class="table-wrap" id="bankTable"><div class="muted small">Đang tải…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Mẫu thông báo & lịch học</h2><div class="sub">Cấu hình mặc định hoặc riêng cho từng trường (trống = dùng mặc định)</div></div>
+            <select class="select" id="setSchool"></select></div>
+          <form id="settingsForm" class="form-grid">
+            <label class="field">Hotline hỗ trợ<input name="HOTLINE"></label>
+            <label class="field">Mã mẫu ZNS (Zalo)<input name="ZNS_TEMPLATE_ID"></label>
+            <label class="field">Tiêu đề email<input name="EMAIL_SUBJECT"></label>
+            <label class="field">Mã mẫu ZNS gửi tài khoản phụ huynh<input name="ZNS_ACCOUNT_TEMPLATE_ID" placeholder="Tham số: student_name, student_code, username, password, url, school_name"></label>
+            <label class="field">Số ngày học / tuần<select name="SCHOOL_DAYS_PER_WEEK"><option value="">Mặc định (5 ngày: thứ 2–6)</option><option value="5">5 ngày (thứ 2–6)</option><option value="6">6 ngày (thứ 2–7)</option></select></label>
+            <label class="field span-2">Ngày nghỉ lễ trong năm học (không tính ngày học / suất ăn)<input name="SCHOOL_HOLIDAYS" placeholder="VD: 20/11/2026, 01/01/2027, 16/02/2027, 17/02/2027"></label>
+            <label class="field">Đường dẫn web app (gửi kèm thông báo)<input name="APP_URL" placeholder="Trống = tự lấy link triển khai"></label>
+            <label class="field span-all">Mẫu SMS (không dấu; biến: {school} {student} {code} {class} {period} {amount} {due} {bank} {account} {content} {hotline})<textarea name="SMS_TEMPLATE"></textarea></label>
+            <div class="actions span-all"><button class="btn" type="submit">Lưu cấu hình</button></div>
+          </form>
+        </div>
+        <div class="card cap-manageSettings">
+          <div class="card-head"><div><h2>Tốc độ hệ thống</h2><div class="sub">Thời gian xử lý thực tế từng chức năng. Sửa tay trực tiếp trên Google Sheets thì bấm “Làm mới dữ liệu” (không bấm, tối đa 30 phút sau tự cập nhật).</div></div>
+            <div class="actions"><button class="btn ghost sm" type="button" onclick="loadPerf()">Xem số đo</button><button class="btn ghost sm" type="button" onclick="clearCacheNow()">Làm mới dữ liệu</button></div></div>
+          <div class="table-wrap" id="perfTable"></div>
+        </div>
+        <div class="card cap-manageSettings">
+          <div class="card-head"><div><h2>Thư mục Google Drive</h2><div class="sub">Khai báo trong Config.gs → APP.DRIVE (hoặc Script Property cùng tên)</div></div><button class="btn ghost sm" type="button" onclick="checkDrive()">Kiểm tra lại</button></div>
+          <div id="driveStatus" class="muted small">Đang kiểm tra…</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Kết nối kênh gửi</h2><div class="sub">Khóa bí mật được lưu trong Script Properties, không hiển thị lại sau khi lưu</div></div><div id="chStatus" class="actions"></div></div>
+          <form id="secretForm" class="form-grid">
+            <label class="field">Zalo App ID<input name="ZALO_APP_ID" autocomplete="off"></label>
+            <label class="field">Zalo App Secret<input name="ZALO_APP_SECRET" type="password" autocomplete="new-password"></label>
+            <label class="field">Zalo OA Refresh token<input name="ZALO_REFRESH_TOKEN" type="password" autocomplete="new-password"></label>
+            <label class="field">eSMS API Key<input name="SMS_API_KEY" type="password" autocomplete="new-password"></label>
+            <label class="field">eSMS Secret Key<input name="SMS_SECRET_KEY" type="password" autocomplete="new-password"></label>
+            <label class="field">Brandname SMS<input name="SMS_BRANDNAME"></label>
+            <div class="actions span-all"><button class="btn" type="submit">Lưu kết nối</button></div>
+          </form>
+          <div class="notice" style="margin-top:18px">Mẫu ZNS cần đăng ký trên Zalo Business với các tham số: <b>student_name, student_code, class_name, school_name, period, amount, due_date, payment_content, bank_account, invoice_id</b>. Email gửi bằng Gmail của tài khoản triển khai (giới hạn số email/ngày theo gói Google).</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===================== CHAT ===================== -->
+<button class="chat-fab hidden" id="chatFab" onclick="toggleChat()" title="Tin nhắn"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg><span class="badge-dot hidden" id="chatBadge">0</span></button>
+<div class="chat-panel hidden" id="chatPanel">
+  <div class="chat-head"><b id="chatTitle">Tin nhắn</b><button class="icon-btn" style="color:#fff" onclick="chatBack()" id="chatBackBtn" title="Danh bạ">‹</button><button class="icon-btn" style="color:#fff" onclick="toggleChat(false)" title="Đóng">✕</button></div>
+  <div id="chatList" class="chat-list"></div>
+  <div id="chatConv" class="chat-conv hidden"><div id="chatMsgs" class="chat-msgs"></div>
+    <form id="chatForm" class="chat-input"><textarea id="chatText" rows="1" placeholder="Nhập tin nhắn… (Enter để gửi)"></textarea><button class="btn sm" type="submit">Gửi</button></form></div>
+</div>
+<div id="modal" class="modal-bg hidden" onclick="if(event.target===this)closeModal()"><div class="modal" id="modalBox"></div></div>
+<div id="busy" class="busy hidden"><div class="box"><div class="spinner"></div><span>Đang lưu…</span></div></div>
+<div id="toast" class="toast hidden"></div>
+<?!= include('Scripts'); ?>
+</body>
+</html>
